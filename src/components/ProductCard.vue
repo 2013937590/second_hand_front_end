@@ -21,8 +21,8 @@
       <h3 class="product-title">{{ product.title }}</h3>
       <div class="product-price">¥{{ product.price }}</div>
       <div class="product-meta">
-        <span>{{ product.category }}</span>
-        <span>{{ formatDate(product.createTime) }}</span>
+        <span>{{ product.categoryId }}</span>
+        <span>{{ formatDate(product.createdAt) }}</span>
       </div>
       
       <div v-if="showActions" class="product-actions">

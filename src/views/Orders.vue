@@ -40,8 +40,8 @@
           >
             <div class="order-header">
               <div class="order-info">
-                <span class="order-no">订单号：{{ order.orderNo }}</span>
-                <span class="order-time">{{ formatDate(order.createTime) }}</span>
+                <span class="order-no">订单号：{{ order.id }}</span>
+                <span class="order-time">{{ formatDate(order.createdAt) }}</span>
               </div>
               <el-tag :type="getOrderStatusType(order.status)">
                 {{ getOrderStatusText(order.status) }}
@@ -49,21 +49,15 @@
             </div>
             
             <div class="order-content">
-              <div class="product-info">
-                <el-image
-                  :src="order.product.images[0]"
-                  :preview-src-list="order.product.images"
-                  fit="cover"
-                  class="product-image"
-                />
-                <div class="product-detail">
-                  <h3 class="product-title">{{ order.product.title }}</h3>
-                  <p class="product-price">¥{{ order.amount }}</p>
-                </div>
+              <div class="order-info">
+                <p class="order-price">¥{{ order.price }}</p>
+                <p class="order-address">收货地址：{{ order.address }}</p>
+                <p class="order-contact">联系人：{{ order.contactName }}</p>
+                <p class="order-phone">联系电话：{{ order.contactPhone }}</p>
               </div>
               
               <div class="order-actions">
-                <template v-if="order.status === 'PENDING'">
+                <template v-if="order.status === 'PENDING_PAYMENT'">
                   <el-button
                     type="primary"
                     @click="handlePay(order)"
@@ -161,7 +155,7 @@ const filterForm = reactive({
 
 // 订单状态选项
 const orderStatusOptions = [
-  { label: '待付款', value: 'PENDING' },
+  { label: '待付款', value: 'PENDING_PAYMENT' },
   { label: '已付款', value: 'PAID' },
   { label: '已发货', value: 'SHIPPED' },
   { label: '已完成', value: 'COMPLETED' },
@@ -176,7 +170,7 @@ const formatDate = (date) => {
 // 获取订单状态类型
 const getOrderStatusType = (status) => {
   const types = {
-    PENDING: 'warning',
+    PENDING_PAYMENT: 'warning',
     PAID: 'success',
     SHIPPED: 'primary',
     COMPLETED: 'success',
@@ -188,7 +182,7 @@ const getOrderStatusType = (status) => {
 // 获取订单状态文本
 const getOrderStatusText = (status) => {
   const texts = {
-    PENDING: '待付款',
+    PENDING_PAYMENT: '待付款',
     PAID: '已付款',
     SHIPPED: '已发货',
     COMPLETED: '已完成',
@@ -201,15 +195,9 @@ const getOrderStatusText = (status) => {
 const fetchOrders = async () => {
   try {
     loading.value = true
-    const params = {
-      page: currentPage.value - 1,
-      size: pageSize.value,
-      status: filterForm.status
-    }
-    
-    const res = await orderStore.getOrders(params)
-    orders.value = res.data.content
-    total.value = res.data.total
+    const res = await orderStore.fetchUserOrders()
+    orders.value = res.data
+    total.value = res.data.length
   } catch (error) {
     console.error('获取订单列表失败：', error)
     ElMessage.error('获取订单列表失败')
@@ -387,36 +375,35 @@ onMounted(() => {
   align-items: center;
 }
 
-.product-info {
-  display: flex;
-  gap: 20px;
-  align-items: center;
-}
-
-.product-image {
-  width: 100px;
-  height: 100px;
-  border-radius: 4px;
-  object-fit: cover;
-}
-
-.product-detail {
+.order-info {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.product-title {
-  margin: 0;
-  font-size: 16px;
-  color: var(--text-color);
-}
-
-.product-price {
+.order-price {
   margin: 0;
   font-size: 18px;
   font-weight: bold;
   color: var(--primary-color);
+}
+
+.order-address {
+  margin: 0;
+  font-size: 16px;
+  color: var(--text-color-secondary);
+}
+
+.order-contact {
+  margin: 0;
+  font-size: 16px;
+  color: var(--text-color-secondary);
+}
+
+.order-phone {
+  margin: 0;
+  font-size: 16px;
+  color: var(--text-color-secondary);
 }
 
 .order-actions {

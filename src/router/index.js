@@ -22,6 +22,12 @@ const routes = [
     component: () => import('@/views/ProductDetail.vue')
   },
   {
+    path: '/product/edit/:id',
+    name: 'EditProduct',
+    component: () => import('@/views/EditProduct.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
     path: '/publish',
     name: 'PublishProduct',
     component: () => import('@/views/PublishProduct.vue'),
@@ -49,12 +55,6 @@ const routes = [
     path: '/orders/:id',
     name: 'OrderDetail',
     component: () => import('@/views/OrderDetail.vue'),
-    meta: { requiresAuth: true }
-  },
-  {
-    path: '/messages',
-    name: 'Messages',
-    component: () => import('@/views/Messages.vue'),
     meta: { requiresAuth: true }
   }
 ]

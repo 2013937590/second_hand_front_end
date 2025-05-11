@@ -68,6 +68,19 @@ export const useOrderStore = defineStore('order', {
       } catch (error) {
         throw error
       }
+    },
+    
+    async getRecentOrders() {
+      try {
+        const res = await getUserOrders()
+        // 只返回最近的5条订单
+        return {
+          ...res,
+          data: res.data.slice(0, 5)
+        }
+      } catch (error) {
+        throw error
+      }
     }
   }
 }) 

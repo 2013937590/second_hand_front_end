@@ -13,11 +13,6 @@
       
       <div class="flex">
         <template v-if="isLoggedIn">
-          <el-menu-item index="/messages">
-            <el-badge :value="unreadCount" :hidden="!unreadCount">
-              消息
-            </el-badge>
-          </el-menu-item>
           <el-menu-item index="/orders">订单</el-menu-item>
           <el-sub-menu index="user">
             <template #title>
@@ -51,7 +46,6 @@ const userStore = useUserStore()
 const activeIndex = computed(() => route.path)
 const isLoggedIn = computed(() => userStore.isLoggedIn)
 const userInfo = computed(() => userStore.getUserInfo)
-const unreadCount = ref(0) // TODO: 实现未读消息计数
 
 const handleLogout = async () => {
   try {

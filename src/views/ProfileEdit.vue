@@ -39,15 +39,6 @@
             />
           </el-form-item>
           
-          <!-- 邮箱 -->
-          <el-form-item label="邮箱" prop="email">
-            <el-input
-              v-model="form.email"
-              placeholder="请输入邮箱"
-              type="email"
-            />
-          </el-form-item>
-          
           <!-- 手机号 -->
           <el-form-item label="手机号" prop="phone">
             <el-input
@@ -57,15 +48,13 @@
             />
           </el-form-item>
           
-          <!-- 个人简介 -->
-          <el-form-item label="个人简介" prop="bio">
+          <!-- 密码 -->
+          <el-form-item label="密码" prop="password">
             <el-input
-              v-model="form.bio"
-              type="textarea"
-              :rows="4"
-              placeholder="请输入个人简介"
-              maxlength="200"
-              show-word-limit
+              v-model="form.password"
+              type="password"
+              placeholder="请输入密码"
+              show-password
             />
           </el-form-item>
           
@@ -99,9 +88,8 @@ const loading = ref(false)
 const form = reactive({
   avatar: '',
   username: '',
-  email: '',
   phone: '',
-  bio: ''
+  password: ''
 })
 
 // 表单验证规则
@@ -110,16 +98,13 @@ const rules = {
     { required: true, message: '请输入用户名', trigger: 'blur' },
     { min: 2, max: 20, message: '长度在 2 到 20 个字符', trigger: 'blur' }
   ],
-  email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
-    { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
-  ],
   phone: [
     { required: true, message: '请输入手机号', trigger: 'blur' },
     { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
   ],
-  bio: [
-    { max: 200, message: '不能超过 200 个字符', trigger: 'blur' }
+  password: [
+    { required: true, message: '请输入密码', trigger: 'blur' },
+    { min: 6, max: 20, message: '密码长度在 6 到 20 个字符', trigger: 'blur' }
   ]
 }
 
@@ -148,8 +133,15 @@ const beforeAvatarUpload = (file) => {
 const fetchUserInfo = async () => {
   try {
     loading.value = true
-    const res = await userStore.getUserInfo()
-    Object.assign(form, res.data)
+    const res = await userStore.fetchUserInfo()
+    console.log('获取到的用户信息：', res.data)
+    
+    // 根据后端返回的数据结构填充表单
+    form.username = res.data.username
+    form.phone = res.data.phone
+    form.avatar = res.data.avatarUrl || ''
+    // 密码字段不自动填充
+    form.password = ''
   } catch (error) {
     console.error('获取用户信息失败：', error)
     ElMessage.error('获取用户信息失败')
@@ -166,7 +158,15 @@ const handleSubmit = async () => {
     await formRef.value.validate()
     loading.value = true
     
-    await userStore.updateUserInfo(form)
+    // 构造符合后端要求的数据结构
+    const userData = {
+      username: form.username,
+      phone: form.phone,
+      avatarUrl: form.avatar,
+      password: form.password
+    }
+    
+    await userStore.updateUserInfo(userData)
     ElMessage.success('保存成功')
     router.push('/profile')
   } catch (error) {

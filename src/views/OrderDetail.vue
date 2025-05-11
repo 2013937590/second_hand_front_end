@@ -20,7 +20,7 @@
                 {{ getOrderStatusText(order.status) }}
               </el-tag>
               <div class="status-actions">
-                <template v-if="order.status === 'PENDING'">
+                <template v-if="order.status === 'PENDING_PAYMENT'">
                   <el-button
                     type="primary"
                     @click="handlePay"
@@ -74,28 +74,31 @@
             
             <el-descriptions :column="2" border>
               <el-descriptions-item label="订单号">
-                {{ order.orderNo }}
+                {{ order.id }}
               </el-descriptions-item>
               <el-descriptions-item label="创建时间">
-                {{ formatDate(order.createTime) }}
+                {{ formatDate(order.createdAt) }}
               </el-descriptions-item>
-              <el-descriptions-item label="支付时间" v-if="order.payTime">
-                {{ formatDate(order.payTime) }}
-              </el-descriptions-item>
-              <el-descriptions-item label="发货时间" v-if="order.shipTime">
-                {{ formatDate(order.shipTime) }}
-              </el-descriptions-item>
-              <el-descriptions-item label="完成时间" v-if="order.completeTime">
-                {{ formatDate(order.completeTime) }}
+              <el-descriptions-item label="更新时间">
+                {{ formatDate(order.updatedAt) }}
               </el-descriptions-item>
               <el-descriptions-item label="订单金额">
-                ¥{{ order.amount }}
+                ¥{{ order.price }}
+              </el-descriptions-item>
+              <el-descriptions-item label="收货地址">
+                {{ order.address }}
+              </el-descriptions-item>
+              <el-descriptions-item label="联系人">
+                {{ order.contactName }}
+              </el-descriptions-item>
+              <el-descriptions-item label="联系电话">
+                {{ order.contactPhone }}
               </el-descriptions-item>
             </el-descriptions>
           </el-card>
           
           <!-- 商品信息 -->
-          <el-card class="product-card">
+          <el-card v-if="product" class="product-card">
             <template #header>
               <div class="card-header">
                 <span>商品信息</span>
@@ -104,15 +107,16 @@
             
             <div class="product-info">
               <el-image
-                :src="order.product.images[0]"
-                :preview-src-list="order.product.images"
+                v-if="product.images && product.images.length > 0"
+                :src="product.images[0]"
+                :preview-src-list="product.images"
                 fit="cover"
                 class="product-image"
               />
               <div class="product-detail">
-                <h3 class="product-title">{{ order.product.title }}</h3>
-                <p class="product-category">{{ order.product.category }}</p>
-                <p class="product-price">¥{{ order.amount }}</p>
+                <h3 class="product-title">{{ product.title }}</h3>
+                <p class="product-category">{{ product.categoryId }}</p>
+                <p class="product-price">¥{{ product.price }}</p>
               </div>
             </div>
           </el-card>
@@ -126,11 +130,14 @@
             </template>
             
             <el-descriptions :column="2" border>
-              <el-descriptions-item label="卖家">
-                {{ order.seller.username }}
+              <el-descriptions-item label="买家ID">
+                {{ order.buyerId }}
               </el-descriptions-item>
-              <el-descriptions-item label="买家">
-                {{ order.buyer.username }}
+              <el-descriptions-item label="卖家ID">
+                {{ order.sellerId }}
+              </el-descriptions-item>
+              <el-descriptions-item label="商品ID">
+                {{ order.productId }}
               </el-descriptions-item>
             </el-descriptions>
           </el-card>
@@ -144,18 +151,21 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useOrderStore } from '@/stores/order'
+import { useProductStore } from '@/stores/product'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
 
 const route = useRoute()
 const router = useRouter()
 const orderStore = useOrderStore()
+const productStore = useProductStore()
 
 // 加载状态
 const loading = ref(false)
 
 // 订单信息
 const order = ref(null)
+const product = ref(null)
 
 // 格式化日期
 const formatDate = (date) => {
@@ -165,7 +175,7 @@ const formatDate = (date) => {
 // 获取订单状态类型
 const getOrderStatusType = (status) => {
   const types = {
-    PENDING: 'warning',
+    PENDING_PAYMENT: 'warning',
     PAID: 'success',
     SHIPPED: 'primary',
     COMPLETED: 'success',
@@ -177,7 +187,7 @@ const getOrderStatusType = (status) => {
 // 获取订单状态文本
 const getOrderStatusText = (status) => {
   const texts = {
-    PENDING: '待付款',
+    PENDING_PAYMENT: '待付款',
     PAID: '已付款',
     SHIPPED: '已发货',
     COMPLETED: '已完成',
@@ -190,8 +200,13 @@ const getOrderStatusText = (status) => {
 const fetchOrderDetail = async () => {
   try {
     loading.value = true
-    const res = await orderStore.getOrderDetail(route.params.id)
+    const res = await orderStore.fetchOrderDetail(route.params.id)
     order.value = res.data
+    // 获取商品详情
+    if (order.value.productId) {
+      const productRes = await productStore.fetchProductDetail(order.value.productId)
+      product.value = productRes.data
+    }
   } catch (error) {
     console.error('获取订单详情失败：', error)
     ElMessage.error('获取订单详情失败')

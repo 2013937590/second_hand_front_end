@@ -75,10 +75,11 @@ export const useProductStore = defineStore('product', {
       }
     },
     
-    async fetchUserProducts(params) {
+    async fetchUserProducts() {
       try {
-        const res = await getUserProducts(params)
+        const res = await getUserProducts()
         this.userProducts = res.data.content
+        this.total = res.data.content.length
         return res
       } catch (error) {
         throw error

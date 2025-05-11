@@ -1,29 +1,25 @@
 <template>
-  <div class="register-container flex-center">
-    <el-card class="register-card">
-      <template #header>
-        <div class="card-header">
-          <h2>用户注册</h2>
-        </div>
-      </template>
+  <div class="register-container">
+    <div class="register-box">
+      <h2 class="title">注册账号</h2>
       
       <el-form
         ref="formRef"
-        :model="formData"
+        :model="form"
         :rules="rules"
         label-width="80px"
-        @submit.prevent="handleRegister"
+        class="register-form"
       >
         <el-form-item label="用户名" prop="username">
           <el-input
-            v-model="formData.username"
+            v-model="form.username"
             placeholder="请输入用户名"
           />
         </el-form-item>
         
         <el-form-item label="手机号" prop="phone">
           <el-input
-            v-model="formData.phone"
+            v-model="form.phone"
             placeholder="请输入手机号"
             type="tel"
           />
@@ -31,41 +27,39 @@
         
         <el-form-item label="密码" prop="password">
           <el-input
-            v-model="formData.password"
-            placeholder="请输入密码"
+            v-model="form.password"
             type="password"
+            placeholder="请输入密码"
             show-password
           />
         </el-form-item>
         
         <el-form-item label="确认密码" prop="confirmPassword">
           <el-input
-            v-model="formData.confirmPassword"
-            placeholder="请再次输入密码"
+            v-model="form.confirmPassword"
             type="password"
+            placeholder="请再次输入密码"
             show-password
           />
         </el-form-item>
         
-        <el-form-item label="邮箱" prop="email">
-          <el-input
-            v-model="formData.email"
-            placeholder="请输入邮箱"
-            type="email"
-          />
-        </el-form-item>
-        
         <el-form-item>
-          <el-button type="primary" native-type="submit" :loading="loading" class="w-100">
+          <el-button
+            type="primary"
+            :loading="loading"
+            class="submit-btn"
+            @click="handleRegister"
+          >
             注册
           </el-button>
         </el-form-item>
         
-        <div class="text-center">
-          <router-link to="/login">已有账号？立即登录</router-link>
+        <div class="login-link">
+          已有账号？
+          <router-link to="/login">立即登录</router-link>
         </div>
       </el-form>
-    </el-card>
+    </div>
   </div>
 </template>
 
@@ -78,18 +72,36 @@ import { ElMessage } from 'element-plus'
 const router = useRouter()
 const userStore = useUserStore()
 
-const formData = reactive({
+// 表单引用
+const formRef = ref(null)
+
+// 加载状态
+const loading = ref(false)
+
+// 表单数据
+const form = reactive({
   username: '',
   phone: '',
   password: '',
-  confirmPassword: '',
-  email: ''
+  confirmPassword: ''
 })
 
+// 表单验证规则
 const validatePass = (rule, value, callback) => {
   if (value === '') {
+    callback(new Error('请输入密码'))
+  } else {
+    if (form.confirmPassword !== '') {
+      formRef.value?.validateField('confirmPassword')
+    }
+    callback()
+  }
+}
+
+const validatePass2 = (rule, value, callback) => {
+  if (value === '') {
     callback(new Error('请再次输入密码'))
-  } else if (value !== formData.password) {
+  } else if (value !== form.password) {
     callback(new Error('两次输入密码不一致'))
   } else {
     callback()
@@ -99,44 +111,42 @@ const validatePass = (rule, value, callback) => {
 const rules = {
   username: [
     { required: true, message: '请输入用户名', trigger: 'blur' },
-    { min: 2, max: 20, message: '长度在 2 到 20 个字符', trigger: 'blur' }
+    { min: 3, max: 20, message: '长度在 3 到 20 个字符', trigger: 'blur' }
   ],
   phone: [
     { required: true, message: '请输入手机号', trigger: 'blur' },
     { pattern: /^1[3-9]\d{9}$/, message: '请输入正确的手机号', trigger: 'blur' }
   ],
   password: [
-    { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码长度不能小于6位', trigger: 'blur' }
+    { required: true, validator: validatePass, trigger: 'blur' },
+    { min: 6, max: 20, message: '长度在 6 到 20 个字符', trigger: 'blur' }
   ],
   confirmPassword: [
-    { required: true, message: '请再次输入密码', trigger: 'blur' },
-    { validator: validatePass, trigger: 'blur' }
-  ],
-  email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
-    { type: 'email', message: '请输入正确的邮箱地址', trigger: 'blur' }
+    { required: true, validator: validatePass2, trigger: 'blur' }
   ]
 }
 
-const loading = ref(false)
-const formRef = ref(null)
-
+// 注册
 const handleRegister = async () => {
   if (!formRef.value) return
   
   try {
     await formRef.value.validate()
+    
     loading.value = true
+    await userStore.register({
+      username: form.username,
+      phone: form.phone,
+      password: form.password
+    })
     
-    const { confirmPassword, ...registerData } = formData
-    await userStore.register(registerData)
-    
-    ElMessage.success('注册成功，请登录')
+    ElMessage.success('注册成功')
     router.push('/login')
   } catch (error) {
-    console.error('注册失败：', error)
-    ElMessage.error(error.message || '注册失败')
+    if (error !== 'cancel') {
+      console.error('注册失败：', error)
+      ElMessage.error('注册失败')
+    }
   } finally {
     loading.value = false
   }
@@ -146,19 +156,48 @@ const handleRegister = async () => {
 <style scoped>
 .register-container {
   min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   background-color: var(--background-color);
 }
 
-.register-card {
+.register-box {
   width: 400px;
+  padding: 40px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
 }
 
-.card-header {
+.title {
+  margin: 0 0 30px;
   text-align: center;
+  font-size: 24px;
+  color: var(--text-color);
 }
 
-.card-header h2 {
-  margin: 0;
-  color: var(--text-color);
+.register-form {
+  margin-top: 20px;
+}
+
+.submit-btn {
+  width: 100%;
+}
+
+.login-link {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--text-color-secondary);
+}
+
+.login-link a {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
+.login-link a:hover {
+  text-decoration: underline;
 }
 </style> 

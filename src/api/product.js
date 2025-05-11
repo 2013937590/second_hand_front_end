@@ -44,10 +44,9 @@ export function deleteProduct(id) {
 }
 
 // 获取用户发布的商品
-export function getUserProducts(params) {
+export function getUserProducts() {
   return request({
     url: '/products/user',
-    method: 'get',
-    params
+    method: 'get'
   })
 } 

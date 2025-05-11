@@ -1,8 +1,8 @@
 <template>
-  <div class="publish-container">
+  <div class="edit-product-container">
     <div class="container">
-      <div class="publish-form">
-        <h2 class="form-title">{{ isEdit ? '编辑商品' : '发布商品' }}</h2>
+      <div class="edit-form">
+        <h2 class="form-title">编辑商品</h2>
         
         <el-form
           ref="formRef"
@@ -98,7 +98,7 @@
           <!-- 提交按钮 -->
           <el-form-item>
             <el-button type="primary" native-type="submit" :loading="loading">
-              {{ isEdit ? '保存修改' : '发布商品' }}
+              保存修改
             </el-button>
             <el-button @click="handleCancel">取消</el-button>
           </el-form-item>
@@ -109,24 +109,23 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useProductStore } from '@/stores/product'
-import { ElMessage } from 'element-plus'
+import { useUserStore } from '@/stores/user'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 
 const route = useRoute()
 const router = useRouter()
 const productStore = useProductStore()
+const userStore = useUserStore()
 
 const formRef = ref(null)
 const loading = ref(false)
 const fileList = ref([])
 const dialogVisible = ref(false)
 const dialogImageUrl = ref('')
-
-// 判断是否是编辑模式
-const isEdit = computed(() => !!route.params.id)
 
 // 商品分类选项
 const categories = [
@@ -171,7 +170,8 @@ const rules = {
     { required: true, message: '请选择商品分类', trigger: 'change' }
   ],
   price: [
-    { required: true, message: '请输入商品价格', trigger: 'blur' }
+    { required: true, message: '请输入商品价格', trigger: 'blur' },
+    { type: 'number', min: 0, message: '价格必须大于 0', trigger: 'blur' }
   ],
   description: [
     { required: true, message: '请输入商品描述', trigger: 'blur' },
@@ -180,6 +180,100 @@ const rules = {
   conditionScore: [
     { required: true, message: '请选择商品成色', trigger: 'change' }
   ]
+}
+
+// 获取商品详情
+const fetchProductDetail = async () => {
+  try {
+    loading.value = true
+    console.log('正在获取商品ID:', route.params.id)
+    const res = await productStore.fetchProductDetail(route.params.id)
+    console.log('获取到的商品信息:', res.data)
+    
+    if (!res.data) {
+      throw new Error('未获取到商品信息')
+    }
+    
+    const product = res.data
+    
+    // 填充表单数据
+    Object.assign(form, {
+      title: product.title,
+      categoryId: product.categoryId,
+      price: product.price,
+      description: product.description,
+      conditionScore: product.conditionScore
+    })
+    
+    // 设置图片列表
+    if (product.images?.length) {
+      fileList.value = product.images.map(url => ({
+        name: url.split('/').pop(),
+        url
+      }))
+      form.images = product.images
+    }
+  } catch (error) {
+    console.error('获取商品详情失败：', error)
+    ElMessage.error(error.message || '获取商品详情失败')
+    router.push('/profile')
+  } finally {
+    loading.value = false
+  }
+}
+
+// 提交表单
+const handleSubmit = async () => {
+  if (!formRef.value) return
+  
+  try {
+    await formRef.value.validate()
+    loading.value = true
+    
+    // 检查是否已登录
+    if (!userStore.isLoggedIn) {
+      ElMessage.warning('请先登录')
+      router.push('/login')
+      return
+    }
+    
+    // 构造符合后端要求的数据结构
+    const productData = {
+      title: form.title,
+      categoryId: Number(form.categoryId),
+      price: Number(form.price),
+      description: form.description,
+      conditionScore: Number(form.conditionScore),
+      images: form.images || []
+    }
+    
+    console.log('提交的商品数据:', productData)
+    await productStore.updateProduct(route.params.id, productData)
+    ElMessage.success('商品更新成功')
+    router.push('/profile')
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('提交失败：', error)
+      ElMessage.error(error.message || '提交失败，请重试')
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
+// 取消编辑
+const handleCancel = () => {
+  ElMessageBox.confirm(
+    '确定要取消编辑吗？未保存的修改将会丢失',
+    '提示',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'warning'
+    }
+  ).then(() => {
+    router.back()
+  }).catch(() => {})
 }
 
 // 图片上传相关方法
@@ -193,7 +287,9 @@ const handleRemove = (file, fileList) => {
 }
 
 const handleUploadSuccess = (response, file, fileList) => {
-  form.images = fileList.map(file => file.url)
+  // 确保response.data是图片URL
+  const imageUrl = response.data || response.url
+  form.images = fileList.map(file => file.url || imageUrl)
   ElMessage.success('图片上传成功')
 }
 
@@ -216,94 +312,25 @@ const beforeUpload = (file) => {
   return true
 }
 
-// 获取商品详情（编辑模式）
-const fetchProductDetail = async () => {
-  try {
-    loading.value = true
-    const res = await productStore.getProductDetail(route.params.id)
-    const product = res.data
-    
-    // 填充表单数据
-    Object.assign(form, {
-      title: product.title,
-      categoryId: product.categoryId,
-      price: product.price,
-      description: product.description,
-      conditionScore: product.conditionScore
-    })
-    
-    // 设置图片列表
-    if (product.images?.length) {
-      fileList.value = product.images.map(url => ({
-        name: url.split('/').pop(),
-        url
-      }))
-      form.images = product.images
-    }
-  } catch (error) {
-    console.error('获取商品详情失败：', error)
-    ElMessage.error('获取商品详情失败')
-  } finally {
-    loading.value = false
-  }
-}
-
-// 提交表单
-const handleSubmit = async () => {
-  if (!formRef.value) return
-  
-  try {
-    await formRef.value.validate()
-    loading.value = true
-    
-    // 构造符合后端要求的数据结构
-    const productData = {
-      title: form.title,
-      categoryId: form.categoryId,
-      price: form.price,
-      description: form.description,
-      conditionScore: form.conditionScore,
-      images: form.images
-    }
-    
-    if (isEdit.value) {
-      await productStore.updateProduct(route.params.id, productData)
-      ElMessage.success('商品更新成功')
-    } else {
-      await productStore.createProduct(productData)
-      ElMessage.success('商品发布成功')
-    }
-    
-    router.push('/profile')
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('提交失败：', error)
-      ElMessage.error('提交失败，请重试')
-    }
-  } finally {
-    loading.value = false
-  }
-}
-
-// 取消
-const handleCancel = () => {
-  router.back()
-}
-
 // 初始化
-onMounted(() => {
-  if (isEdit.value) {
-    fetchProductDetail()
+onMounted(async () => {
+  // 检查是否已登录
+  if (!userStore.isLoggedIn) {
+    ElMessage.warning('请先登录')
+    router.push('/login')
+    return
   }
+  
+  await fetchProductDetail()
 })
 </script>
 
 <style scoped>
-.publish-container {
+.edit-product-container {
   padding: 20px 0;
 }
 
-.publish-form {
+.edit-form {
   max-width: 800px;
   margin: 0 auto;
   background: #fff;

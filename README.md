@@ -1,24 +1,25 @@
-# second_hand_front_end
+# 校园二手交易平台（半成品）
 
-## Project setup
-```
-npm install
-```
+一个基于 Vue 3 + Element Plus 开发的二手交易平台，提供便捷的二手商品交易服务。
 
-### Compiles and hot-reloads for development
-```
-npm run serve
-```
+## 功能特点
 
-### Compiles and minifies for production
-```
-npm run build
-```
+- ��️ 商品管理：发布、编辑、删除商品
+- �� 商品搜索：支持关键词搜索、分类筛选、价格排序
+- 👤 用户中心：个人信息管理、商品管理、订单管理
+- 💰 交易系统：在线购买、订单管理
+- 📱 响应式设计：完美支持移动端和桌面端
 
-### Lints and fixes files
-```
-npm run lint
-```
+## 技术栈
 
-### Customize configuration
-See [Configuration Reference](https://cli.vuejs.org/config/).
+- 前端框架：Vue 3
+- UI 组件库：Element Plus
+- 状态管理：Pinia
+- 路由管理：Vue Router
+- HTTP 客户端：Axios
+- 工具库：Day.js
+
+todo：
+UI美化（网站太丑了）
+消息模块
+评价模块
